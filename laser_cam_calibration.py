@@ -69,18 +69,10 @@ class Optimize():
             for n,d,p in zip(Nc,D,laser_points):
                 err.append(func(H,n,d,p))
             return err
+
         para = leastsq(loss,H0,args=(Nc,d,laser_3dpoints))
         H0 = para[0].reshape(3,3)
 
-        # 检验最小二乘法的结果
-        H_true = args['H_true']
-        # [R_clt,T_clt] = args['H_true']
-        for n,di,p in zip(Nc,d,laser_3dpoints):
-            err = func(H0,n,di,p)
-            rig = func(H_true,n,di,p)
-            # rig = sum(n*(R_clt.dot([p[0],p[1],0])+T_clt[:,0]))+di
-            if err>1e-3:
-                print('leastsq is wrong!')
         # 第二步 计算出旋转和平移矩阵
         h3 = H0[:,2]
         Rlc = H0.copy()
@@ -199,9 +191,6 @@ def test_optimize():
     print(RT[1].tolist())
 
 
-def temp_test():
-    A = Optimize()
-    A.run(test = 'sajka')
 
 def compute_laser_points(R_cpt, T_cpt, R_clt, T_clt):
     '''
@@ -230,7 +219,5 @@ def compute_laser_points(R_cpt, T_cpt, R_clt, T_clt):
     return P_l
 
 if __name__ == '__main__':
-    # lc_calibate = LaserCameraCalibration()
-    # lc_calibate.calibrate()
     test_optimize()
-    # temp_test()
+
