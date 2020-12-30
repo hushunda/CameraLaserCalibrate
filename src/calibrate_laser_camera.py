@@ -1,3 +1,4 @@
+# coding:utf-8
 '''
 相机和单线激光标定：
     上一步已经相机和标定板的坐标变换
@@ -19,12 +20,12 @@ from scipy.optimize import root,leastsq
 
 
 class Optimize():
-    def __init__(self,method = 'svd'):
+    def __init__(self,config):
         self.AllMethod = ['svd','sgd']
-        self.method = method
+        self.method = config['optimize_method']
         assert self.method in self.AllMethod
 
-    def run(self,**args):
+    def __call__(self,**args):
         return getattr(self,self.method)(args)
 
     def svd(self,args):
@@ -38,23 +39,21 @@ class Optimize():
 
         # 数据预处理
         laser_points = args['laser_points']
-        R_cpt = args['R_cpt']
-        T_cpt = args['T_cpt']
+        Nces = args['Nc']
+        Dses = args['Ds']
         # H初始化
         if 'H0' in args and args['H0'] is not None:
             H0 = args['H0']
         else:
             H0 = -np.eye(3)
         Nc = []
-        d = []
+        Ds = []
         laser_3dpoints = []
-        for p,R,T in zip(laser_points,R_cpt,T_cpt):
-            n = R[:,2]
-            for p_i in p:
-                laser_3dpoints.append([p_i[0],p_i[1],1])
+        for p,n,d in zip(laser_points, Nces, Dses):
+            for pi in p:
+                laser_3dpoints.append([pi[0],pi[1],1])
                 Nc.append(n)
-                d.append(-sum(n * T))
-
+                Ds.append(d)
 
         # 第一步 最小二乘求解
         def func(H,Nc,D,laser_points):
@@ -70,7 +69,7 @@ class Optimize():
                 err.append(func(H,n,d,p))
             return err
 
-        para = leastsq(loss,H0,args=(Nc,d,laser_3dpoints))
+        para = leastsq(loss,H0,args=(Nc,Ds,laser_3dpoints))
         H0 = para[0].reshape(3,3)
 
         # 第二步 计算出旋转和平移矩阵
@@ -89,45 +88,15 @@ class Optimize():
         print('sgd')
         print(args)
 
-class LaserCameraCalibration():
-    def __init__(self,laser_data_path, camera_pose_path ):
-        self.laser_data_path = laser_data_path
-        self.camera_pose_path = camera_pose_path
-        self.calibrate_data = {}
-        self.load_data()
-        self.optimize_method = 'svd'
-        self.optimize = Optimize(self.optimize_method)
-
-    def run(self):
-        '''
-        1. 找到激光点
-        2. 拟合激光点
-        3. 计算R和T
-        '''
-        self.find_laser_points()
-        self.fit_laser_line()
-        self.optimize.run()
-
-    @staticmethod
-    def calibrate(self,laser_points=None, R_cpt=None, T_cpt=None):
-        pass
-
-    def compute(self, x):
-        R = []
-        T = x[3:]
-
-
-    def fit_laser_line(self):
-        pass
-
-    def find_laser_points(self):
-        pass
-
-    def load_data(self):
-        with open(self.camera_pose_path,'r') as f:
-            for line in f.readlines():
-                line = line.strip('\n')
-                self.calibrate_data[line[0]] = line[1:]
+    def RT2ncd(self, R_cpt,T_cpt):
+        '''将旋转平移矩阵,计算出法线和距离'''
+        Nc = []
+        Ds = []
+        for R,T in zip(R_cpt,T_cpt):
+            n = R[:,2]
+            Nc.append(n)
+            Ds.append(-sum(n * T))
+        return Nc, Ds
 
 def theta_to_rotate_matrix(angle):
     anglex,angley,anglez = np.deg2rad(angle)
@@ -189,8 +158,6 @@ def test_optimize():
     print('-' * 10 + 'prediction' + '-' * 10)
     print(RT[0].tolist())
     print(RT[1].tolist())
-
-
 
 def compute_laser_points(R_cpt, T_cpt, R_clt, T_clt):
     '''
