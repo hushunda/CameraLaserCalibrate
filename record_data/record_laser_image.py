@@ -69,7 +69,7 @@ def webcamImagePub(q):
                 if q.qsize() >0:
                     laser_data = q.get()
                     all_data.append([laser_data,frame])
-                    cv2.imwrite(img_path+'%0.4d.jpg'%count,frame)
+                    cv2.imwrite(os.path.join(img_path, '%0.4d.jpg'%count),frame)
                     count+=1
                     print('had record %d data' % count)
                 else:

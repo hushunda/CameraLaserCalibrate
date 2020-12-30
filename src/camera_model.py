@@ -10,7 +10,7 @@ def get_camera_model(model_name):
 
 class BaseCameraModel(object):
     def __init__(self,config):
-        print('load %s camera mode'%config['camera_model'])
+        print('load %s camera model'%config['camera_model'])
         self.load_camera_params(config)
         self.config = config
 
@@ -74,7 +74,7 @@ class Omnidir(BaseCameraModel):
     FOV >150
     '''
     def __init__(self,config):
-        super(Omnidir).__init__(config)
+        super(Omnidir,self).__init__(config)
 
     def pixel2camera(self,imgpoints):
         camerapoints = cv2.omnidir.undistortPoints(imgpoints,self.K,self.D,self.Xi)
@@ -99,18 +99,18 @@ class Fisheye(BaseCameraModel):
     120<FOV<150
     '''
     def __init__(self,config):
-        super(Fisheye).__init__(config)
+        super(Fisheye,self).__init__(config)
 
     def pixel2camera(self,imgpoints):
         camerapoints = cv2.fisheye.undistortPoints(imgpoints,self.K,self.D)
         return camerapoints
 
-class PinHole(BaseCameraModel):
+class Pinhole(BaseCameraModel):
     '''
     FOV <120
     '''
     def __init__(self,config):
-        super(PinHole).__init__(config)
+        super(Pinhole,self).__init__(config)
 
     def pixel2camera(self,imgpoints):
         camerapoints = cv2.undistortPoints(imgpoints,self.K,self.D)

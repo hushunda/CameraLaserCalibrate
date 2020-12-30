@@ -1,4 +1,4 @@
-data_root = './data'
+data_root = './data'# 绝对路径
 data_collection_config = {'cam_id':0,
                           'img_wight':1920,'img_hight':1080,
                           'scan_topic_name': 'scan', # 激光消息名字,一般为scan
@@ -8,7 +8,7 @@ data_collection_config = {'cam_id':0,
                           }
 
 camera_config = {
-        'camera_model': 'omnidir',# fisheye, pinhole or omnidir(Mei) model
+        'camera_model': 'pinhole',# fisheye, pinhole or omnidir(Mei) model
         'tag_type': 'chess',  # 'chess' # 暂时不支持'aruco'
         'tag_size': 0.045,  #单位米
         'checkerboard': (11,8),  # if choice chess ,need

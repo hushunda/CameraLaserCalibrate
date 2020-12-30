@@ -3,8 +3,9 @@
 import cv2
 import pickle
 import os,sys
+import numpy as np
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-from config import camera_config,data_root
+from config import camera_config,data_root,data_collection_config
 from src.camera_model import get_camera_model
 
 def record_img():
@@ -12,10 +13,10 @@ def record_img():
     os.makedirs(img_save_path,exist_ok=True)
     print('record image in  ',img_save_path)
 
-    cap = cv2.VideoCapture(camera_config['cam_id'])
+    cap = cv2.VideoCapture(data_collection_config ['cam_id'])
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-    cap.set(3, camera_config['img_wight'])
-    cap.set(4, camera_config['img_hight'])
+    cap.set(3, data_collection_config ['img_wight'])
+    cap.set(4, data_collection_config ['img_hight'])
     print('img height :', cap.get(3))
     print('img width:', cap.get(4))
     print('img fps:', cap.get(5))
@@ -29,7 +30,8 @@ def record_img():
             cv2.imshow('show', img)
             k = cv2.waitKey(1)
             if k == ord('c'):
-                cv2.imwrite(img_save_path + '%0.3d.jpg' % (ind), img)
+                cv2.imwrite(os.path.join(img_save_path,'%0.3d.jpg' % (ind)), img)
+                print('INFO: had record %d image'%(ind+1))
                 ind += 1
             if k == ord('k'):
                 break
@@ -37,16 +39,16 @@ def record_img():
 
 def calibrate():
     inter_params_path = os.path.join(data_root,'inter_params.pkl')
-    os.makedirs(inter_params_path, exist_ok=True)
+    os.makedirs(data_root, exist_ok=True)
 
     images = [cv2.imread(os.path.join(data_root,'inter_img',path))
               for path in os.listdir(os.path.join(data_root,'inter_img')) if path.endswith('jpg')]
-    img_shape = images[0].shape
-    camera_model = get_camera_model(camera_config)
+    img_shape = images[0].shape[:2]
+    camera_model = get_camera_model(camera_config['camera_model'])(camera_config)
     objpoints, imgpoints = camera_model.detect_points(images)
     if camera_model.config['camera_model'] == 'fisheye':
-        K = None
-        D = None
+        K = np.eye(3)
+        D = np.zeros([4,1])
         rms = cv2.fisheye.calibrate(
             objpoints,
             imgpoints,
@@ -57,9 +59,9 @@ def calibrate():
             criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 60, 1e-6))
         data = {'K': K, 'D': D}
     if camera_model.config['camera_model'] == 'omnidir':
-        K = None
-        D = None
-        Xi = None
+        K = np.eye(3)
+        D = np.zeros([1,4])
+        Xi = np.ones((1,1))
         rms = cv2.omnidir.calibrate(
             objpoints,
             imgpoints,
@@ -72,8 +74,8 @@ def calibrate():
         print("xi=np.array(" + str(Xi.tolist()) + ")")
         data = {'K': K, 'D': D, 'Xi':Xi}
     if camera_model.config['camera_model'] == 'pinhole':
-        K = None
-        D = None
+        K = np.zeros((3,3))
+        D = np.zeros((5,1))
         rms = cv2.calibrateCamera(
             objpoints,
             imgpoints,
@@ -89,5 +91,5 @@ def calibrate():
 
 
 if __name__ == '__main__':
-    record_img()
+    # record_img()
     calibrate()
