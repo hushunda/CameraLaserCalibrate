@@ -20,7 +20,10 @@ class BaseCameraModel(object):
             with open(config['inter_params_path'],'rb') as f:
                 data = pickle.load(f)
                 for k in data:
-                    setattr(self,k,data[k])
+                    if k =='xi':
+                        self.Xi = data[k]
+                    else:
+                        setattr(self,k,data[k])
         else:
             keys = ['K','D','Xi']
             for k in keys:
@@ -31,8 +34,9 @@ class BaseCameraModel(object):
         '''检测板子角点'''
         if self.config['tag_type'] == 'chess':
             checkerboard = self.config['checkerboard']
+            tag_size = self.config['tag_size']
             objp = np.zeros((1, checkerboard[0] * checkerboard[1], 3), np.float32)
-            objp[0, :, :2] = np.mgrid[0:checkerboard[0], 0:checkerboard[1]].T.reshape(-1, 2)
+            objp[0, :, :2] = np.mgrid[0:checkerboard[0], 0:checkerboard[1]].T.reshape(-1, 2)*tag_size
             objpoints = []
             imgpoints = []
             for img in images:
@@ -54,11 +58,12 @@ class BaseCameraModel(object):
         Nc = []
         Ds = []
         for op,cp in zip(objpoints,camerapoints):
-            success, rotation_vector, translation_vector= cv2.solvePnP(op, cp, np.eyes(3),
+            success, rotation_vector, translation_vector= cv2.solvePnP(op, cp, np.eye(3),
                          np.zeros(4), flags=cv2.SOLVEPNP_ITERATIVE)
             if success:
-                Nc.append(rotation_vector[:,2])
-                Ds.append((rotation_vector[:,2]*translation_vector).sum())
+                R = cv2.Rodrigues(rotation_vector)[0]
+                Nc.append(R[:,2])
+                Ds.append((R[:,2]*translation_vector).sum())
         return Nc,Ds
 
     def __call__(self,images):
@@ -77,7 +82,7 @@ class Omnidir(BaseCameraModel):
         super(Omnidir,self).__init__(config)
 
     def pixel2camera(self,imgpoints):
-        camerapoints = cv2.omnidir.undistortPoints(imgpoints,self.K,self.D,self.Xi)
+        camerapoints = cv2.omnidir.undistortPoints(np.concatenate(imgpoints,axis=0),self.K,self.D,self.Xi,np.zeros([3,1]))
         camerapoints = self.compute_camera_coord(camerapoints)
         return camerapoints
 
@@ -87,10 +92,10 @@ class Omnidir(BaseCameraModel):
         y=point[:,:,1]
         r2 = x ** 2 + y ** 2
         a = r2 + 1
-        b = 2 * self.xi * r2
-        cc = r2 * self.xi ** 2 - 1
+        b = 2 * self.Xi * r2
+        cc = r2 * self.Xi ** 2 - 1
         z = np.squeeze((-b + np.sqrt(b * b - 4 * a * cc)) / (2 * a))
-        scale = np.squeeze(self.xi + z)
+        scale = np.squeeze(self.Xi + z)
         point = np.stack((x * scale / z, y * scale / z), axis=2)
         return point
 

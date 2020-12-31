@@ -8,18 +8,18 @@ data_collection_config = {'cam_id':0,
                           }
 
 camera_config = {
-        'camera_model': 'pinhole',# fisheye, pinhole or omnidir(Mei) model
+        'camera_model': 'omnidir',# fisheye, pinhole or omnidir(Mei) model
         'tag_type': 'chess',  # 'chess' # 暂时不支持'aruco'
         'tag_size': 0.045,  #单位米
         'checkerboard': (11,8),  # if choice chess ,need
-        'inter_params_path': None,# 内参路径
+        'inter_params_path': '/home/zjrobot/robot_perception/calibration/human-perception/data/robot_with_shell/fisheye_head_front/inter_param.pkl',# 内参路径
         'K':None,'D':None,'Xi':None#或者手动输入内参,List
 }
 
 
 calibrate_config={
         'select_laser':'auto',# auto or manunal
-        'one_by_one_show':True,# one by one frame to show laser data
+        'one_by_one_show':False,# one by one frame to show laser data
         'data_root': data_root,
         'optimize_method': 'svd',# 目前只有svd
         }

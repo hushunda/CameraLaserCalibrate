@@ -15,10 +15,11 @@ opencv-contrib-python
 1. 配置参数
 2. 数据采集
     ```shell script
-    python record_laser_image.py   #按下C记录一帧数据,按下K结束.
+    python record_laser_image.py   
    ```
-   使用 <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Del</kbd> 重启电脑
-    输出laser_image.pkl保存所有数据,images下显示采集的图像数据
+   按下<kbd>C</kbd>采集一帧数据
+   按下<kbd>K</kbd>结束采集数据
+   输出laser_image.pkl保存所有数据,images下显示采集的图像数据
 3. 标定相机参数(可选)  
    显示畸变矫正结果  
    [在线打印aruco](https://chev.me/arucogen/)

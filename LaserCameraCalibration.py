@@ -14,12 +14,15 @@ def main():
     # load data
     with open(os.path.join(calibrate_config['data_root'],'laser_image.pkl'),'rb') as f:
         laser_img_data = pickle.load(f)
-    if len(laser_img_data):
+    if len(laser_img_data)==0:
         print('No Find data')
         return
-
-    images = [x[1] for x in laser_img_data]
-    laseres = [x[0] for x in laser_img_data]
+    images = []
+    laseres = []
+    for las,img in laser_img_data:
+        if img is not None and las:
+            images.append(img)
+            laseres.append(las)
 
 
     # First compute camera pose
