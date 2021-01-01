@@ -36,7 +36,7 @@ def main():
     # Third Calibrate
     calibrate = Optimize(calibrate_config)
     R,T = calibrate(Nc = Nc,Ds= Ds,laser_points = valid_laser)
-    print('R:  \n', R,'T: \n',T)
+    print('R:  \n', R,'\nT: \n',T)
 
 if __name__ == '__main__':
     main()

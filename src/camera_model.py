@@ -39,7 +39,8 @@ class BaseCameraModel(object):
             objp[0, :, :2] = np.mgrid[0:checkerboard[0], 0:checkerboard[1]].T.reshape(-1, 2)*tag_size
             objpoints = []
             imgpoints = []
-            for img in images:
+            valid_index = []
+            for idx,img in enumerate(images):
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.uint8)
                 ret, corners = cv2.findChessboardCorners(gray, checkerboard,
                                                          cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE)
@@ -48,29 +49,38 @@ class BaseCameraModel(object):
                     corners2 = cv2.cornerSubPix(gray, corners, (3, 3), (-1, -1),
                                                 (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 60, 0.01))
                     imgpoints.append(corners2.reshape(1, -1, 2))
-            return objpoints, imgpoints
+                    valid_index.append(idx)
+            return objpoints, imgpoints,valid_index
         elif self.config['tag_type'] == 'aruco':
             raise NotImplementedError
             # TODO
 
-    def compute_nc_d(self,objpoints,camerapoints):
+    def compute_nc_d(self,objpoints,camerapoints,valid_index):
         '''计算相机坐标下:板子的法线Nc,圆点到板子的距离'''
         Nc = []
         Ds = []
-        for op,cp in zip(objpoints,camerapoints):
+        out_valid_index = []
+        for op,cp,idx in zip(objpoints,camerapoints,valid_index):
             success, rotation_vector, translation_vector= cv2.solvePnP(op, cp, np.eye(3),
                          np.zeros(4), flags=cv2.SOLVEPNP_ITERATIVE)
             if success:
                 R = cv2.Rodrigues(rotation_vector)[0]
+                if (R[:,2]*translation_vector).sum()<0:continue
                 Nc.append(R[:,2])
-                Ds.append((R[:,2]*translation_vector).sum())
-        return Nc,Ds
+                Ds.append(-(R[:,2]*translation_vector[:,0]).sum())
+                out_valid_index.append(idx)
+        return Nc,Ds,out_valid_index
 
     def __call__(self,images):
-        objpoints, imgpoints = self.detect_points(images)
+        objpoints, imgpoints,valid_index = self.detect_points(images)
         camerapoints = self.pixel2camera(imgpoints)
-        return self.compute_nc_d(objpoints, camerapoints)
-
+        Nc,D,valid_index = self.compute_nc_d(objpoints, camerapoints,valid_index)
+        out_Nc = [[]]*len(images)
+        out_D = [[]]*len(images)
+        for i,idx in enumerate(valid_index):
+            out_Nc[idx] = Nc[i]
+            out_D[idx] = D[i]
+        return out_Nc,out_D
     def pixel2camera(self, imgpoints):
         raise NotImplementedError
 

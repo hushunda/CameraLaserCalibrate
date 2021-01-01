@@ -55,7 +55,8 @@ class Optimize():
                     laser_3dpoints.append([pi[0],pi[1],1])
                     Nc.append(n)
                     Ds.append(d)
-
+        if len(laser_3dpoints)<6:
+            raise '数据不充足'
         # 第一步 最小二乘求解
         def func(H,Nc,D,laser_points):
             Nc = np.array(Nc)
