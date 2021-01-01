@@ -56,14 +56,14 @@ class Optimize():
                     Nc.append(n)
                     Ds.append(d)
         if len(laser_3dpoints)<6:
-            raise '数据不充足'
+            raise 'No have enough data'
         # 第一步 最小二乘求解
         def func(H,Nc,D,laser_points):
             Nc = np.array(Nc)
             D = np.array(D)
             H = H.reshape(3,3)
             laser_points = np.array(laser_points)
-            return sum(Nc*(H.dot(laser_points)))+D
+            return sum(Nc*(H.dot(laser_points))+D)
 
         def loss(H,Nc,D,laser_points):
             err =[]
@@ -97,7 +97,7 @@ class Optimize():
         for R,T in zip(R_cpt,T_cpt):
             n = R[:,2]
             Nc.append(n)
-            Ds.append(-sum(n * T))
+            Ds.append(-n * T)
         return Nc, Ds
 
 def theta_to_rotate_matrix(angle):
@@ -130,7 +130,7 @@ def test_optimize():
     T_cpt = np.array([[random.random()*100,random.random()*50,random.random()*50] for i in range(10)])
 
     # 激光在板子上的位置
-    opt = Optimize('svd')
+    opt = Optimize({'optimize_method':'svd'})
     P_l = compute_laser_points(R_cpt, T_cpt, R_clt, T_clt)
     # 验证激光点正确性
     for i,p in enumerate(P_l):
@@ -153,12 +153,13 @@ def test_optimize():
 
     H_true = R_clt.copy()
     H_true[:,2] = T_clt[:,0]
-    RT = opt.run(laser_points=P_l, R_cpt=R_cpt, T_cpt=T_cpt, H0=H0, H_true = H_true)#[R_clt,T_clt])#
+    Nc, Ds = opt.RT2ncd(R_cpt, T_cpt)
+    RT = opt(laser_points=P_l,Nc=Nc, Ds=Ds , H0=H_true)
     print('-'*10+'label'+'-'*10)
     print(np.linalg.inv(R_clt))
     print(-np.linalg.inv(R_clt).dot(T_clt))
     print('-' * 10 + 'prediction' + '-' * 10)
-    print(RT[0].tolist())
+    print(RT[0])
     print(RT[1].tolist())
 
 def compute_laser_points(R_cpt, T_cpt, R_clt, T_clt):
