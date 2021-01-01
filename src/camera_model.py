@@ -81,7 +81,10 @@ class BaseCameraModel(object):
             out_Nc[idx] = Nc[i]
             out_D[idx] = D[i]
         return out_Nc,out_D
+
     def pixel2camera(self, imgpoints):
+        raise NotImplementedError
+    def projectPoints(self, camerapoints):
         raise NotImplementedError
 
 class Omnidir(BaseCameraModel):
@@ -95,6 +98,15 @@ class Omnidir(BaseCameraModel):
         camerapoints = cv2.omnidir.undistortPoints(np.concatenate(imgpoints,axis=0),self.K,self.D,self.Xi,np.zeros([3,1]))
         camerapoints = self.compute_camera_coord(camerapoints)
         return camerapoints
+
+    def projectPoints(self,camerapoints):
+        '''
+        投影相机坐标系的点到图像上
+        camerapoints： n*3
+        '''
+        camerapoints = np.array(camerapoints)
+        pixel_points = cv2.omnidir.projectPoints(camerapoints[None], np.zeros(3,dtype=np.float32), np.zeros([3,1]),self.K, self.Xi[0][0], self.D)
+        return pixel_points[0][0]
 
     def compute_camera_coord(self,point):
         '''将坐标点恢复到相机坐标系'''
@@ -120,6 +132,15 @@ class Fisheye(BaseCameraModel):
         camerapoints = cv2.fisheye.undistortPoints(imgpoints,self.K,self.D)
         return camerapoints
 
+    def projectPoints(self,camerapoints):
+        '''
+        投影相机坐标系的点到图像上
+        camerapoints： n*3
+        '''
+        camerapoints = np.array(camerapoints)
+        pixel_points = cv2.fisheye.projectPoints(camerapoints[None], np.zeros(3,dtype=np.float32), np.zeros([3,1]),self.K,  self.D)
+        return pixel_points[0][0]
+
 class Pinhole(BaseCameraModel):
     '''
     FOV <120
@@ -131,6 +152,14 @@ class Pinhole(BaseCameraModel):
         camerapoints = cv2.undistortPoints(imgpoints,self.K,self.D)
         return camerapoints
 
+    def projectPoints(self,camerapoints):
+        '''
+        投影相机坐标系的点到图像上
+        camerapoints： n*3
+        '''
+        camerapoints = np.array(camerapoints)
+        pixel_points = cv2.projectPoints(camerapoints[None], np.zeros(3,dtype=np.float32), np.zeros([3,1]),self.K,  self.D)
+        return pixel_points[0][0]
 
 class CustomModel(BaseCameraModel):
     def __init__(self,config):

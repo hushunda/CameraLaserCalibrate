@@ -68,6 +68,7 @@ class SelectLaserData():
             cv2.imshow(win_name, canvas)
             cv2.waitKey(0 if self.config['one_by_one_show'] else 1)
         return canvas
+
     def fit_laser_line(self,valid_point,min_num_point = 10,min_valid_len=5):
         if len(valid_point) <min_num_point:
             return []
@@ -96,7 +97,7 @@ class SelectLaserData():
         distance = np.abs(A * point[0] + B * point[1] + C) / (np.sqrt(A ** 2 + B ** 2))
         return distance
 
-    def preprocess(self,laser):
+    def preprocess(self, laser):
         laser_point = []
         for la in laser:
             theta = np.arange(len(la['ranges']))*la['angle_increment']+la['angle_min']
