@@ -35,6 +35,7 @@ class Optimize():
                [ h1, h4, h7]
             H =[ h2, h5, h8]
                [ h3, h6, h9]
+            返回： 激光到相机的变换关系RT
         '''
 
         # 数据预处理
@@ -45,7 +46,7 @@ class Optimize():
         if 'H0' in args and args['H0'] is not None:
             H0 = args['H0']
         else:
-            H0 = -np.eye(3)
+            H0 = np.eye(3)#np.array([[0,0,1],[-1,0,0],[0,-1,0]])
         Nc = []
         Ds = []
         laser_3dpoints = []
@@ -56,14 +57,15 @@ class Optimize():
                     Nc.append(n)
                     Ds.append(d)
         if len(laser_3dpoints)<6:
-            raise 'No have enough data'
+            raise NotImplemented
         # 第一步 最小二乘求解
         def func(H,Nc,D,laser_points):
             Nc = np.array(Nc)
             D = np.array(D)
             H = H.reshape(3,3)
             laser_points = np.array(laser_points)
-            return sum(Nc*(H.dot(laser_points))+D)
+            # 加上正则项
+            return abs(sum(Nc*(H.dot(laser_points))-D))+abs(0.01*(H).sum())
 
         def loss(H,Nc,D,laser_points):
             err =[]
@@ -76,15 +78,13 @@ class Optimize():
 
         # 第二步 计算出旋转和平移矩阵
         h3 = H0[:,2]
-        Rlc = H0.copy()
-        Rlc[:,2] = np.cross(Rlc[:,0],Rlc[:,1])
-        Rlc = Rlc.T
-        Tlc = -Rlc.dot(h3)
-        # 第三步 SVD计算Rlc.(Rlc可能不是旋转矩阵)
-        U,s,V =np.linalg.svd(Rlc)
-
-        Rlc = U.dot(V.T)
-        return Rlc,Tlc
+        Rcl = H0.copy()
+        Rcl[:,2] = np.cross(Rcl[:,0],Rcl[:,1])
+        Tcl = h3
+        # 第三步 SVD计算Rcl.(Rcl可能不是旋转矩阵)
+        U,s,V =np.linalg.svd(Rcl)
+        Rcl = U.dot(V)
+        return Rcl,Tcl
 
     def sgd(self,args):
         print('sgd')
@@ -97,7 +97,7 @@ class Optimize():
         for R,T in zip(R_cpt,T_cpt):
             n = R[:,2]
             Nc.append(n)
-            Ds.append(-n * T)
+            Ds.append(n * T)
         return Nc, Ds
 
 def theta_to_rotate_matrix(angle):
@@ -154,10 +154,12 @@ def test_optimize():
     H_true = R_clt.copy()
     H_true[:,2] = T_clt[:,0]
     Nc, Ds = opt.RT2ncd(R_cpt, T_cpt)
-    RT = opt(laser_points=P_l,Nc=Nc, Ds=Ds , H0=H_true)
+    RT = opt(laser_points=P_l,Nc=Nc, Ds=Ds , H0=H0)
     print('-'*10+'label'+'-'*10)
-    print(np.linalg.inv(R_clt))
-    print(-np.linalg.inv(R_clt).dot(T_clt))
+    # print(np.linalg.inv(R_clt))
+    # print(-np.linalg.inv(R_clt).dot(T_clt))
+    print(R_clt)
+    print(T_clt)
     print('-' * 10 + 'prediction' + '-' * 10)
     print(RT[0])
     print(RT[1].tolist())

@@ -18,7 +18,7 @@ camera_config = {
 
 
 calibrate_config={
-        'select_laser':'auto',# auto or manunal
-        'one_by_one_show':False,# one by one frame to show laser data
+        'select_laser':'auto',# auto or manual
+        'one_by_one_show':True,# one by one frame to show laser data
         'optimize_method': 'svd',# 目前只有svd
         }

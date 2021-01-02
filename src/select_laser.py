@@ -20,6 +20,7 @@ class SelectLaserData():
                 line_points = self.fit_laser_line(valid_point)
                 self.show(lp,valid_point,line_points, self.win_name)
                 return_points.append(line_points)
+                # return_points.append(valid_point)
         elif self.config['select_laser']=='manual':
             laser_point = self.preprocess(laser)
             for lp in laser_point:
@@ -56,7 +57,7 @@ class SelectLaserData():
         canvas = np.zeros((800,800,3),dtype=np.uint8)
         for p in laser_point:
             p = (p+4)*100
-            cv2.circle(canvas, (int(p[0]),int(p[1])), 1, (255, 0, 0), -1)
+            cv2.circle(canvas, (int(p[0]),int(p[1])), 1, (255, 255, 0), -1)
         if valid_point is not None:
             for p in valid_point:
                 p = (p + 4) * 100
@@ -69,18 +70,25 @@ class SelectLaserData():
             cv2.waitKey(0 if self.config['one_by_one_show'] else 1)
         return canvas
 
-    def fit_laser_line(self,valid_point,min_num_point = 10,min_valid_len=5):
+    def fit_laser_line(self,valid_point,min_num_point = 10,min_valid_len = 5):
         if len(valid_point) <min_num_point:
             return []
-        a= np.polyfit(valid_point[:,0],valid_point[:,1],1)
-        dis = [self.get_distance_from_point_to_line(p,(0,a[1]),(-a[1]/a[0],0)) for p in valid_point]
-        if max(dis)<0.01:
+        # 取板子上相邻num个点最近的点
+        num = 10
+        out_valid = []
+        for i in range(0,len(valid_point),num):
+            t = valid_point[i:i+num]
+            out_valid.append(t[np.argmin(t[:,0])])
+        valid_point = np.array(out_valid)
+        kb= np.polyfit(valid_point[:,0],valid_point[:,1],1)
+        dis = [self.get_distance_from_point_to_line(p,(0,kb[1]),(-kb[1]/kb[0],0)) for p in valid_point]
+        if max(dis)<0.003:
             return [valid_point[0],valid_point[-1]]
-        index = np.where(np.array(dis)<0.01)[0]
+        index = np.where(np.array(dis)<0.005)[0]
         if index[-1]-index[0]>min_valid_len:
             return [valid_point[index[-1]], valid_point[index[0]]]
         print('这条线不够')
-        return None
+        return []
 
     def get_distance_from_point_to_line(self, point, line_point1, line_point2):
         # 对于两点坐标为同一点时,返回点与点的距离
@@ -107,7 +115,7 @@ class SelectLaserData():
             laser_point.append(np.vstack([x,y]).T)
         return laser_point
 
-    def find_laser_points(self, laser_point,seg_max_dis = 0.05,max_dis = 2, min_angle = -60,max_angle = 60):
+    def find_laser_points(self, laser_point,seg_max_dis = 0.05,max_dis = 3, min_angle = -40,max_angle = 40):
         '''只取出3米内的正前方的激光线,120度内'''
         dis = np.linalg.norm(laser_point,axis=1)
         theta = np.arccos(laser_point[:, 0] / dis)

@@ -14,6 +14,20 @@ class BaseCameraModel(object):
         self.load_camera_params(config)
         self.config = config
 
+    def __call__(self,images):
+        # objpoints, imgpoints,valid_index = self.detect_points(images)
+        import pickle
+        # pickle.dump([objpoints, imgpoints,valid_index],open('temp.pkl' ,'wb'))
+        objpoints, imgpoints,valid_index = pickle.load(open('temp.pkl' ,'rb'))
+        camerapoints = self.pixel2camera(imgpoints)
+        Nc,D,valid_index = self.compute_nc_d(objpoints, camerapoints,valid_index)
+        out_Nc = [[]]*len(images)
+        out_D = [[]]*len(images)
+        for i,idx in enumerate(valid_index):
+            out_Nc[idx] = Nc[i]
+            out_D[idx] = D[i]
+        return out_Nc,out_D
+
     def load_camera_params(self,config):
         '''载入相机内参'''
         if config['inter_params_path'] is not None:
@@ -48,6 +62,9 @@ class BaseCameraModel(object):
                     objpoints.append(objp)
                     corners2 = cv2.cornerSubPix(gray, corners, (3, 3), (-1, -1),
                                                 (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 60, 0.01))
+                    cv2.drawChessboardCorners(img, checkerboard, corners2, ret)
+                    cv2.imshow('findCorners', img)
+                    cv2.waitKey(1)
                     imgpoints.append(corners2.reshape(1, -1, 2))
                     valid_index.append(idx)
             return objpoints, imgpoints,valid_index
@@ -65,25 +82,14 @@ class BaseCameraModel(object):
                          np.zeros(4), flags=cv2.SOLVEPNP_ITERATIVE)
             if success:
                 R = cv2.Rodrigues(rotation_vector)[0]
-                if (R[:,2]*translation_vector).sum()<0:continue
                 Nc.append(R[:,2])
-                Ds.append(-(R[:,2]*translation_vector[:,0]).sum())
+                Ds.append((R[:,2]*translation_vector[:,0]))
                 out_valid_index.append(idx)
         return Nc,Ds,out_valid_index
 
-    def __call__(self,images):
-        objpoints, imgpoints,valid_index = self.detect_points(images)
-        camerapoints = self.pixel2camera(imgpoints)
-        Nc,D,valid_index = self.compute_nc_d(objpoints, camerapoints,valid_index)
-        out_Nc = [[]]*len(images)
-        out_D = [[]]*len(images)
-        for i,idx in enumerate(valid_index):
-            out_Nc[idx] = Nc[i]
-            out_D[idx] = D[i]
-        return out_Nc,out_D
-
     def pixel2camera(self, imgpoints):
         raise NotImplementedError
+
     def projectPoints(self, camerapoints):
         raise NotImplementedError
 
