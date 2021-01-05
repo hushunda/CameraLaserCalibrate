@@ -74,7 +74,7 @@ class SelectLaserData():
         if len(valid_point) <min_num_point:
             return []
         # 取板子上相邻num个点最近的点
-        num = 10
+        num = 5
         out_valid = []
         for i in range(0,len(valid_point),num):
             t = valid_point[i:i+num]
