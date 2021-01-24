@@ -7,7 +7,7 @@ import pickle
 from src.select_laser import SelectLaserData
 from src.camera_model import get_camera_model
 from src.calibrate_laser_camera import Optimize
-from config import camera_config,calibrate_config,data_root
+from Configs import camera_config,calibrate_config,data_root
 
 def main():
     '''标定分为是三步'''

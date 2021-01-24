@@ -11,6 +11,10 @@
 5.使用中按下 c保存一次图像.。。按下k结束。
 '''
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+sys.path.append(os.path.dirname(__file__))
 import os
 import rospy
 from sensor_msgs.msg import LaserScan
@@ -19,8 +23,10 @@ import cv2
 import time
 import numpy as np
 import multiprocessing as mp
-from config import data_collection_config as config
-from config import data_root
+from Configs import data_collection_config as config
+from Configs import data_root
+
+
 
 ## 配置
 img_path = os.path.join(data_root,'images')

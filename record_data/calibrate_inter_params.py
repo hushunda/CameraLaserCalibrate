@@ -5,7 +5,7 @@ import pickle
 import os,sys
 import numpy as np
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-from config import camera_config,data_root,data_collection_config
+from Configs import camera_config,data_root,data_collection_config
 from src.camera_model import get_camera_model
 
 def record_img():
