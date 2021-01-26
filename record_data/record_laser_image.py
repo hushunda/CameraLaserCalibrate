@@ -21,85 +21,90 @@ from sensor_msgs.msg import LaserScan
 import pickle
 import cv2
 import time
-import numpy as np
-import multiprocessing as mp
+import threading
+import queue
 from Configs import data_collection_config as config
 from Configs import data_root
+import ctypes
 
-
+# TODO 改成线程
 
 ## 配置
 img_path = os.path.join(data_root,'images')
 os.makedirs(img_path,exist_ok=True)
 save_pkl = os.path.join(data_root,'laser_image.pkl')
 
-if config['local_ros']:
+if not config['local_ros']:
     os.environ["ROS_HOSTNAME"]=config['ROS_HOSTNAME']
     os.environ["ROS_MASTER_URI"]=config['ROS_MASTER_URI']
 
 if not os.path.exists(data_root):
     os.makedirs(data_root)
 
-def callback(data,q):
-    q.put(data)
-    q.get() if q.qsize() > 1 else time.sleep(0.01)
-def listenor(q):
-    rospy.init_node('laser_listen', anonymous=True)
-    rospy.Subscriber(config['scan_topic_name'], LaserScan, callback, callback_args=q)
-    rospy.spin()
+class RecordImageLaser():
+    def __init__(self):
+        self.config = config
 
-def webcamImagePub(q):
-    # make a video_object and init the video object
-    cap = cv2.VideoCapture(config['cam_id'])
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-    cap.set(3, config['img_wight'])
-    cap.set(4, config['img_hight'])
-    print('img height :', cap.get(3))
-    print('img width:', cap.get(4))
-    print('img fps:', cap.get(5))
-    cv2.namedWindow('show',0)
-    count = 0
-    # loop until press 'esc' or 'q'
-    print(' start to record laser data and image data')
-    print('        press "C" to record a frame data        ' )
-    print('        press "K" to finish record data        ' )
+        self.cap = cv2.VideoCapture(config['cam_id'])
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+        self.cap.set(3, config['img_wight'])
+        self.cap.set(4, config['img_hight'])
+        print('img height :', self.cap.get(3))
+        print('img width:', self.cap.get(4))
+        print('img fps:', self.cap.get(5))
+        cv2.namedWindow('show', 0)
 
-    all_data = []
-    while 1:
-        # header = Header(stamp=rospy.Time.now())
-        ret, frame = cap.read()
-        if ret:
-            cv2.imshow('show',frame)
-            k = cv2.waitKey(1)
-            if k==ord('c'):
-                if q.qsize() >0:
-                    laser_data = q.get()
-                    all_data.append([laser_data,frame])
-                    cv2.imwrite(os.path.join(img_path, '%0.4d.jpg'%count),frame)
-                    count+=1
-                    print('had record %d data' % count)
-                else:
-                    print('no laser data')
+        # loop until press 'esc' or 'q'
+        print(' start to record laser data and image data')
+        print('        press "C" to record a frame data        ')
+        print('        press "K" to finish record data        ')
 
-            elif k==ord('k'):
-                break
-    with open(save_pkl,'wb') as f:
-        pickle.dump(all_data,f)
+        self.img_queue = queue.Queue(maxsize=4)
+        self.img_thread = threading.Thread(target=self.laser_listener, args=(self.img_queue,))
+        self.img_thread.setDaemon(True)
+        self.img_thread.start()
 
-    print('+++++++++++++ finish record data +++++++++++++')
+    def run(self):
+        all_data = []
+        count = 0
+        while 1:
+            # header = Header(stamp=rospy.Time.now())
+            ret, frame = self.cap.read()
+            if ret:
+                cv2.imshow('show', frame)
+                k = cv2.waitKey(1)
+                if k == ord('c'):
+                    if self.img_queue.qsize() > 0:
+                        laser_data = self.img_queue.get()
+                        all_data.append([laser_data, frame])
+                        cv2.imwrite(os.path.join(img_path, '%0.4d.jpg' % count), frame)
+                        count += 1
+                        print('had record %d data' % count)
+                    else:
+                        print('no laser data')
 
+                elif k == ord('k'):
+                    break
+        with open(save_pkl, 'wb') as f:
+            pickle.dump(all_data, f)
 
+        print('+++++++++++++ finish record data +++++++++++++')
+        # 结束激光callback线程
 
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(self.img_thread.ident, ctypes.py_object(SystemExit))
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(self.img_thread.ident, None)
+
+    def laser_callback(self,data,q):
+        q.put(data)
+        q.get() if q.qsize() > 1 else time.sleep(0.01)
+
+    def laser_listener(self,q):
+        rospy.init_node('laser_listen', anonymous=True)
+        rospy.Subscriber(self.config['scan_topic_name'], LaserScan, self.laser_callback, callback_args=q)
+        rospy.spin()
 
 
 if __name__ == '__main__':
-    # mp.set_start_method(method='spawn')  # init
-    queues = mp.Queue(maxsize=4)
-    processes = [mp.Process(target=webcamImagePub, args=(queues,))]
-    processes.append(mp.Process(target=listenor, args=(queues,)))
+    app = RecordImageLaser()
+    app.run()
 
-    for process in processes:
-        process.daemon = True  # setattr(process, 'deamon', True)
-        process.start()
-    for process in processes:
-        process.join()

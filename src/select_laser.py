@@ -2,11 +2,12 @@
 
 import cv2
 import numpy as np
+import math
 
 class SelectLaserData():
     def __init__(self,config):
         self.config = config
-        self.min_laser_points = 5
+        self.min_laser_points = 3
         self.win_name = 'laser point'
         cv2.namedWindow(self.win_name,cv2.WINDOW_AUTOSIZE)
     def __call__(self, laser):
@@ -56,6 +57,8 @@ class SelectLaserData():
     def show(self,laser_point,valid_point=None,line_points=None,win_name = 'laser point',no_show = False):
         canvas = np.zeros((800,800,3),dtype=np.uint8)
         for p in laser_point:
+            if math.isinf(p[0]) or math.isinf(p[1]):
+                continue
             p = (p+4)*100
             cv2.circle(canvas, (int(p[0]),int(p[1])), 1, (255, 255, 0), -1)
         if valid_point is not None:
@@ -82,9 +85,12 @@ class SelectLaserData():
         valid_point = np.array(out_valid)
         kb= np.polyfit(valid_point[:,0],valid_point[:,1],1)
         dis = [self.get_distance_from_point_to_line(p,(0,kb[1]),(-kb[1]/kb[0],0)) for p in valid_point]
-        if max(dis)<0.003:
+        if max(dis)<0.01:
             return [valid_point[0],valid_point[-1]]
         index = np.where(np.array(dis)<0.005)[0]
+        if len(index) == 0:
+            print('这条线不够')
+            return []
         if index[-1]-index[0]>min_valid_len:
             return [valid_point[index[-1]], valid_point[index[0]]]
         print('这条线不够')
@@ -108,19 +114,24 @@ class SelectLaserData():
     def preprocess(self, laser):
         laser_point = []
         for la in laser:
-            theta = np.arange(len(la['ranges']))*la['angle_increment']+la['angle_min']
-            ranges = np.array(la['ranges'])
+            theta = np.arange(len(la.ranges))*la.angle_increment+la.angle_min
+            ranges = np.array(la.ranges)
             x = ranges*np.cos(theta)
             y = ranges*np.sin(theta)
             laser_point.append(np.vstack([x,y]).T)
         return laser_point
 
-    def find_laser_points(self, laser_point,seg_max_dis = 0.05,max_dis = 3, min_angle = -40,max_angle = 40):
+    def find_laser_points(self, laser_point,seg_max_dis = 0.05,max_dis = 1, min_angle = -40,max_angle = 40):
         '''只取出3米内的正前方的激光线,120度内'''
         dis = np.linalg.norm(laser_point,axis=1)
         theta = np.arccos(laser_point[:, 0] / dis)
-        valid_point = laser_point[np.logical_and(np.logical_and(np.deg2rad(min_angle)<theta,theta<np.deg2rad(max_angle)),
-                                                 dis<max_dis)]
+        valid_point = laser_point[
+            np.logical_and(
+                np.logical_and(
+                        np.logical_and(
+                            np.deg2rad(min_angle)<theta,theta<np.deg2rad(max_angle)
+                ),dis<max_dis),
+            np.logical_not(np.isinf(dis)))]
 
         '''分割激光线段'''
         valid_point = np.array(valid_point)

@@ -4,6 +4,7 @@ import cv2
 import pickle
 import os,sys
 import numpy as np
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 from Configs import camera_config,data_root,data_collection_config
 from src.camera_model import get_camera_model
@@ -14,7 +15,7 @@ def record_img():
     print('record image in  ',img_save_path)
 
     cap = cv2.VideoCapture(data_collection_config ['cam_id'])
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+    # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
     cap.set(3, data_collection_config ['img_wight'])
     cap.set(4, data_collection_config ['img_hight'])
     print('img height :', cap.get(3))
@@ -38,14 +39,14 @@ def record_img():
     print('+++++++++++++ finish record data +++++++++++++')
 
 def calibrate():
-    inter_params_path = os.path.join(data_root,'inter_params.pkl')
+    inter_params_path = camera_config['inter_params_path']
     os.makedirs(data_root, exist_ok=True)
 
     images = [cv2.imread(os.path.join(data_root,'inter_img',path))
-              for path in os.listdir(os.path.join(data_root,'inter_img')) if path.endswith('jpg')]
+              for path in os.listdir(camera_config['inter_image_path']) if path.endswith('jpg')]
     img_shape = images[0].shape[:2]
-    camera_model = get_camera_model(camera_config['camera_model'])(camera_config)
-    objpoints, imgpoints = camera_model.detect_points(images)
+    camera_model = get_camera_model(camera_config['camera_model'])(camera_config,load_camparam = False)
+    objpoints, imgpoints, _ = camera_model.detect_points(images)
     if camera_model.config['camera_model'] == 'fisheye':
         K = np.eye(3)
         D = np.zeros([4,1])
@@ -89,7 +90,30 @@ def calibrate():
     with open(inter_params_path, 'wb') as f:
         pickle.dump(data,f)
 
+def calibrate_exter_param():
+    exter_params_path = camera_config['exter_params_path']
+    os.makedirs(data_root, exist_ok=True)
+
+    images = [cv2.imread(camera_config['exter_image_path'])]
+    img_shape = images[0].shape[:2]
+    camera_model = get_camera_model(camera_config['camera_model'])(camera_config)
+    objpoints, imgpoints, _ = camera_model.detect_points(images)
+    if len(objpoints[0])==0:
+        raise NotImplementedError('exter image no find corner! ')
+    if camera_model.config['camera_model'] == 'pinhole':
+        undistorted = cv2.undistortPoints(imgpoints[0], camera_model.K, camera_model.D)
+        ret, rvec, tvec = cv2.solvePnP(objpoints[0].astype(np.float32), undistorted, np.eye(3), np.zeros([4, 1]),
+                                                 flags=cv2.SOLVEPNP_ITERATIVE)
+        if not ret:raise NotImplementedError('exter param calibrate fail! ')
+        rvec = cv2.Rodrigues(rvec)[0]
+        tvec = tvec
+        data = {'rvec': rvec, 'tvec': tvec}
+    print("rvec=np.array(" + str(rvec.tolist()) + ")")
+    print("tvec=np.array(" + str(tvec.tolist()) + ")")
+    with open(exter_params_path, 'wb') as f:
+        pickle.dump(data, f)
 
 if __name__ == '__main__':
     # record_img()
     calibrate()
+    # calibrate_exter_param()

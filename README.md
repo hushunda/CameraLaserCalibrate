@@ -20,6 +20,8 @@
 	camera_config: 相机的模型,如果已经标定了参数,可以直接将内参写入config.用List.也可以用```python record_data/calibrate_inter_params.py```进行数据的采集和标定.然后保存内参在```inter_params_path```路径下.
 	calibrate_config: 相机和激光标定的参数
 2. 数据采集
+
+    进入 record_data文件夹
     ```shell script
     python record_laser_image.py   
    ```

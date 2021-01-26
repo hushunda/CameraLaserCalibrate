@@ -4,21 +4,23 @@
 import cv2
 import numpy as np
 import pickle
+import cv2.aruco as aruco
 
 def get_camera_model(model_name):
     return eval(model_name.capitalize())
 
 class BaseCameraModel(object):
-    def __init__(self,config):
+    def __init__(self,config,load_camparam = True):
         print('load %s camera model'%config['camera_model'])
-        self.load_camera_params(config)
+        if load_camparam:
+            self.load_camera_params(config)
         self.config = config
 
     def __call__(self,images):
-        # objpoints, imgpoints,valid_index = self.detect_points(images)
-        import pickle
+        objpoints, imgpoints,valid_index = self.detect_points(images)
+        # import pickle
         # pickle.dump([objpoints, imgpoints,valid_index],open('temp.pkl' ,'wb'))
-        objpoints, imgpoints,valid_index = pickle.load(open('temp.pkl' ,'rb'))
+        # objpoints, imgpoints,valid_index = pickle.load(open('temp.pkl' ,'rb'))
         camerapoints = self.pixel2camera(imgpoints)
         Nc,D,valid_index = self.compute_nc_d(objpoints, camerapoints,valid_index)
         out_Nc = [[]]*len(images)
@@ -69,8 +71,31 @@ class BaseCameraModel(object):
                     valid_index.append(idx)
             return objpoints, imgpoints,valid_index
         elif self.config['tag_type'] == 'aruco':
-            raise NotImplementedError
-            # TODO
+
+            aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_250)
+            parameters = aruco.DetectorParameters_create()
+            objp = np.zeros((1, 4, 3), np.float32)
+            objp[0, :, :2] = np.mgrid[0:2, 0:2].T.reshape(-1, 2)*self.config['tag_size']
+            objpoints = []
+            imgpoints = []
+            valid_index = []
+            for idx, img in enumerate(images):
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.uint8)
+                corners, ids, rejectedImgPoints = aruco.detectMarkers(gray,
+                                                                      aruco_dict,
+                                                                      parameters=parameters)
+
+                if ids is not None and self.config['aruco_id']== ids[0]:
+                    corners = corners[ids[0].tolist().index(self.config['aruco_id'])].squeeze()
+                    # show
+                    # for p in corners:
+                    #     cv2.circle(img,(int(p[0]),int(p[1])),2,(1,255,2),-1)
+                    # cv2.imshow('img',img)
+                    # cv2.waitKey()
+                    imgpoints.append(corners)
+                    objpoints.append(objp)
+                    valid_index.append(idx)
+            return objpoints, imgpoints, valid_index
 
     def compute_nc_d(self,objpoints,camerapoints,valid_index):
         '''计算相机坐标下:板子的法线Nc,圆点到板子的距离'''
@@ -78,7 +103,7 @@ class BaseCameraModel(object):
         Ds = []
         out_valid_index = []
         for op,cp,idx in zip(objpoints,camerapoints,valid_index):
-            success, rotation_vector, translation_vector= cv2.solvePnP(op, cp, np.eye(3),
+            success, rotation_vector, translation_vector= cv2.solvePnP(op.squeeze(), cp.squeeze(), np.eye(3),
                          np.zeros(4), flags=cv2.SOLVEPNP_ITERATIVE)
             if success:
                 R = cv2.Rodrigues(rotation_vector)[0]
@@ -97,8 +122,8 @@ class Omnidir(BaseCameraModel):
     '''
     FOV >150
     '''
-    def __init__(self,config):
-        super(Omnidir,self).__init__(config)
+    def __init__(self,config,load_camparam = True):
+        super(Omnidir,self).__init__(config,load_camparam = load_camparam)
 
     def pixel2camera(self,imgpoints):
         camerapoints = cv2.omnidir.undistortPoints(np.concatenate(imgpoints,axis=0),self.K,self.D,self.Xi,np.zeros([3,1]))
@@ -131,8 +156,8 @@ class Fisheye(BaseCameraModel):
     '''
     120<FOV<150
     '''
-    def __init__(self,config):
-        super(Fisheye,self).__init__(config)
+    def __init__(self,config,load_camparam = True):
+        super(Fisheye,self).__init__(config,load_camparam = load_camparam)
 
     def pixel2camera(self,imgpoints):
         camerapoints = cv2.fisheye.undistortPoints(imgpoints,self.K,self.D)
@@ -151,11 +176,14 @@ class Pinhole(BaseCameraModel):
     '''
     FOV <120
     '''
-    def __init__(self,config):
-        super(Pinhole,self).__init__(config)
+    def __init__(self,config,load_camparam = True):
+        super(Pinhole,self).__init__(config,load_camparam = load_camparam)
 
     def pixel2camera(self,imgpoints):
-        camerapoints = cv2.undistortPoints(imgpoints,self.K,self.D)
+        camerapoints = []
+        for imgp in imgpoints:
+            camp = cv2.undistortPoints(imgp ,self.K,self.D)
+            camerapoints.append(camp)
         return camerapoints
 
     def projectPoints(self,camerapoints):
@@ -165,7 +193,7 @@ class Pinhole(BaseCameraModel):
         '''
         camerapoints = np.array(camerapoints)
         pixel_points = cv2.projectPoints(camerapoints[None], np.zeros(3,dtype=np.float32), np.zeros([3,1]),self.K,  self.D)
-        return pixel_points[0][0]
+        return pixel_points[0].squeeze()
 
 class CustomModel(BaseCameraModel):
     def __init__(self,config):
