@@ -27,7 +27,7 @@ from Configs import data_collection_config as config
 from Configs import data_root
 import ctypes
 
-# TODO 改成线程
+
 
 ## 配置
 img_path = os.path.join(data_root,'images')
@@ -52,30 +52,30 @@ class RecordImageLaser():
         print('img height :', self.cap.get(3))
         print('img width:', self.cap.get(4))
         print('img fps:', self.cap.get(5))
-        cv2.namedWindow('show', 0)
+
 
         # loop until press 'esc' or 'q'
         print(' start to record laser data and image data')
         print('        press "C" to record a frame data        ')
         print('        press "K" to finish record data        ')
 
-        self.img_queue = queue.Queue(maxsize=4)
-        self.img_thread = threading.Thread(target=self.laser_listener, args=(self.img_queue,))
-        self.img_thread.setDaemon(True)
-        self.img_thread.start()
+        self.laser_queue = queue.Queue(maxsize=4)
+        self.laser_thread = threading.Thread(target=self.laser_listener, args=(self.laser_queue,))
+        self.laser_thread.setDaemon(True)
+        self.laser_thread.start()
 
     def run(self):
         all_data = []
         count = 0
+        cv2.namedWindow('show', 0)
         while 1:
-            # header = Header(stamp=rospy.Time.now())
             ret, frame = self.cap.read()
             if ret:
                 cv2.imshow('show', frame)
                 k = cv2.waitKey(1)
                 if k == ord('c'):
-                    if self.img_queue.qsize() > 0:
-                        laser_data = self.img_queue.get()
+                    if self.laser_queue.qsize() > 0:
+                        laser_data = self.laser_queue.get()
                         all_data.append([laser_data, frame])
                         cv2.imwrite(os.path.join(img_path, '%0.4d.jpg' % count), frame)
                         count += 1
@@ -91,8 +91,8 @@ class RecordImageLaser():
         print('+++++++++++++ finish record data +++++++++++++')
         # 结束激光callback线程
 
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(self.img_thread.ident, ctypes.py_object(SystemExit))
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(self.img_thread.ident, None)
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(self.laser_thread.ident, ctypes.py_object(SystemExit))
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(self.laser_thread.ident, None)
 
     def laser_callback(self,data,q):
         q.put(data)
