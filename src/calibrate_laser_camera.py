@@ -65,7 +65,7 @@ class Optimize():
             H = H.reshape(3,3)
             laser_points = np.array(laser_points)
             # 加上正则项
-            return (Nc*(H.dot(laser_points))-D).sum()#+abs(0.01*(H).sum())
+            return (Nc*(H.dot(laser_points))-D).sum()+abs(0.01*(H).sum())
 
         def loss(H,Nc,D,laser_points):
             err =[]

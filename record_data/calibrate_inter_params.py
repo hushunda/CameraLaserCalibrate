@@ -88,7 +88,7 @@ def calibrate():
     print("K=np.array(" + str(K.tolist()) + ")")
     print("D=np.array(" + str(D.tolist()) + ")")
     with open(inter_params_path, 'wb') as f:
-        pickle.dump(data,f)
+        pickle.dump(data, f, protocol=2)
 
 def calibrate_exter_param():
     exter_params_path = camera_config['exter_params_path']
@@ -111,7 +111,7 @@ def calibrate_exter_param():
     print("rvec=np.array(" + str(rvec.tolist()) + ")")
     print("tvec=np.array(" + str(tvec.tolist()) + ")")
     with open(exter_params_path, 'wb') as f:
-        pickle.dump(data, f)
+        pickle.dump(data, f, protocol=2)
 
 if __name__ == '__main__':
     # record_img()

@@ -44,7 +44,7 @@ if not os.path.exists(data_root):
 class RecordImageLaser():
     def __init__(self):
         self.config = config
-
+        rospy.init_node('laser_listen', anonymous=True)
         self.cap = cv2.VideoCapture(config['cam_id'])
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
         self.cap.set(3, config['img_wight'])
@@ -99,7 +99,6 @@ class RecordImageLaser():
         q.get() if q.qsize() > 1 else time.sleep(0.01)
 
     def laser_listener(self,q):
-        rospy.init_node('laser_listen', anonymous=True)
         rospy.Subscriber(self.config['scan_topic_name'], LaserScan, self.laser_callback, callback_args=q)
         rospy.spin()
 

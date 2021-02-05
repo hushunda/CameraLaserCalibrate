@@ -109,6 +109,8 @@ class BaseCameraModel(object):
                 R = cv2.Rodrigues(rotation_vector)[0]
                 Nc.append(R[:,2])
                 Ds.append((R[:,2]*translation_vector[:,0]))
+                # Nc.append(rotation_vector)
+                # Ds.append(translation_vector)
                 out_valid_index.append(idx)
         return Nc,Ds,out_valid_index
 

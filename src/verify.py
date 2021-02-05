@@ -10,7 +10,7 @@ from Configs import data_root,camera_config
 def main():
     # load data
 
-    with open(os.path.join(data_root, 'laser_image.pkl'), 'rb') as f:
+    with open(os.path.join(data_root, 'laser_image_1.pkl'), 'rb') as f:
         laser_img_data = pickle.load(f)
     if len(laser_img_data) == 0:
         print('No Find data')
@@ -32,7 +32,7 @@ def main():
     R_TCL = TCL['R']
     T_TCL = TCL['T']
 
-    theta_range = (-60/180*3.14,60/180*3.14)
+    theta_range = (-45/180*3.14,45/180*3.14)
 
     cv2.namedWindow('laser on image',cv2.WINDOW_GUI_NORMAL)
     for laser,image in zip(laseres,images):
