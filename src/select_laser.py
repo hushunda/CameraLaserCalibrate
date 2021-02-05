@@ -20,8 +20,8 @@ class SelectLaserData():
                 valid_point = self.find_laser_points(lp)
                 line_points = self.fit_laser_line(valid_point)
                 self.show(lp,valid_point,line_points, self.win_name)
-                return_points.append(line_points)
-                # return_points.append(valid_point)
+                # return_points.append(line_points)
+                return_points.append(valid_point)
         elif self.config['select_laser']=='manual':
             laser_point = self.preprocess(laser)
             for lp in laser_point:
@@ -33,8 +33,8 @@ class SelectLaserData():
                 # self.show(valid_point, win_name=self.win_name)
                 line_points = self.fit_laser_line(valid_point)
                 self.show(lp, valid_point, line_points, self.win_name)
-                return_points.append(line_points)
-                # return_points.append(valid_point)
+                # return_points.append(line_points)
+                return_points.append(valid_point)
         else:
             raise NotImplementedError
 

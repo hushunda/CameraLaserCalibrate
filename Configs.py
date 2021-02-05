@@ -1,6 +1,5 @@
 import os
 data_root = '../data/camera1'# 绝对路径
-
 data_collection_config = {'cam_id':0,
                           'img_wight':1280,'img_hight':720,
                           'scan_topic_name': 'scan', # 激光消息名字,一般为scan

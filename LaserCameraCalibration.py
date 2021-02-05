@@ -7,31 +7,32 @@ import pickle
 from src.select_laser import SelectLaserData
 from src.camera_model import get_camera_model
 from src.calibrate_laser_camera import Optimize
+
+
 from Configs import camera_config,calibrate_config,data_root
 
-def main():
-    '''标定分为是三步'''
-    # load data
-    with open(os.path.join(data_root,'laser_image_2.pkl'),'rb') as f:
+def load_data(images,laseres,datapath):
+    with open(datapath,'rb') as f:
         laser_img_data = pickle.load(f)
-    with open(os.path.join(data_root,'laser_image_1.pkl'),'rb') as f:
-        laser_img_data1 = pickle.load(f)
+
     if len(laser_img_data)==0:
-        print('No Find data')
-        return
-    images = []
-    laseres = []
+        print('%d :No Find data',datapath)
+        return images,laseres
+
+
     for las,img in laser_img_data:
         if img is not None and las:
             images.append(img)
             laseres.append(las)
+    return images,laseres
 
-    for las,img in laser_img_data1:
-        if img is not None and las:
-            images.append(img)
-            laseres.append(las)
-
-
+def main():
+    '''标定分为是三步'''
+    # load data
+    images = []
+    laseres = []
+    datapath = os.path.join(data_root, 'laser_image.pkl')
+    images, laseres = load_data(images, laseres, datapath)
     # First compute camera pose
     camera_model = get_camera_model(camera_config['camera_model'])(camera_config)
     Nc,Ds = camera_model(images)
