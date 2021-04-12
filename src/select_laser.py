@@ -57,8 +57,9 @@ class SelectLaserData():
 
     def show(self,laser_point,valid_point=None,line_points=None,win_name = 'laser point',no_show = False):
         canvas = np.zeros((800,800,3),dtype=np.uint8)
+
         for p in laser_point:
-            if math.isinf(p[0]) or math.isinf(p[1]):
+            if math.isinf(p[0]) or math.isinf(p[1]) or np.isnan(p[0]) or np.isnan(p[1]):
                 continue
             p = (p+4)*100
             cv2.circle(canvas, (int(p[0]),int(p[1])), 1, (255, 255, 0), -1)
