@@ -9,9 +9,7 @@ from Configs import data_root,camera_config
 
 def main():
     # load data
-
-    # with open(os.path.join(data_root, 'laser_image_aruco.pkl'), 'rb') as f:
-    with open(os.path.join(data_root, '../test_calibration/laser_image.pkl'), 'rb') as f:
+    with open(os.path.join(data_root, 'laser_image.pkl'), 'rb') as f:
         laser_img_data = pickle.load(f)
     if len(laser_img_data) == 0:
         print('No Find data')
