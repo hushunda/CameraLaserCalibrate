@@ -1,5 +1,5 @@
 import os
-data_root = './data/calibration_data'# 绝对路径
+data_root = './data/camera1'# 绝对路径
 data_collection_config = {'cam_id':0,
                           'img_wight':1280,'img_hight':720,
                           'scan_topic_name': 'scan', # 激光消息名字,一般为scan
@@ -13,7 +13,7 @@ camera_config = {
         'tag_type': 'chess',  # 'chess' or 'aruco'
         'aruco_id': 0,  # 如果使用单个'aruco',需要id(使用aruco.DICT_4X4_250)
         'tag_size':  0.0104,#,  #单位米 0.012
-        'checkerboard': (9,6),  # if choice chess ,need
+        'checkerboard': (9,7),  # if choice chess ,need
         'inter_params_path': os.path.join(data_root,'inter_param.pkl'),# 内参路径
         'exter_params_path': os.path.join(data_root,'exter_param.pkl'),# 外参路径
 
